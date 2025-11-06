@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// Lottie animasyonu bu ekranda varsayılan olarak çıkarıldı, istenirse eklenebilir.
-// import 'package:lottie/lottie.dart';
+import 'package:lottie/lottie.dart';
 
 import '../utils/app_styles.dart';
 import 'employee_dashboard_screen.dart'; // Kayıttan sonra yönlendirilecek ekran
@@ -14,8 +13,14 @@ class EmployeeRegistrationScreen extends StatefulWidget {
       _EmployeeRegistrationScreenState();
 }
 
-class _EmployeeRegistrationScreenState
-    extends State<EmployeeRegistrationScreen> {
+class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
+    with SingleTickerProviderStateMixin {
+  // Animasyon için Ticker mixin
+
+  // --- Animation Controllers ---
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
   // Controller'lar
   final TextEditingController _employeeIdController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
@@ -26,6 +31,10 @@ class _EmployeeRegistrationScreenState
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
+  // EK ALANLAR (Yeni eklenenler)
+  final TextEditingController _taxIdController = TextEditingController();
+  final TextEditingController _shopNameController = TextEditingController();
+
   final _formKey = GlobalKey<FormState>();
 
   // Şifre görünürlük durumları
@@ -33,7 +42,24 @@ class _EmployeeRegistrationScreenState
   bool _isConfirmPasswordVisible = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Animasyon Ayarları
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    );
+
+    _animation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.linear),
+    );
+
+    _animationController.repeat(reverse: false);
+  }
+
+  @override
   void dispose() {
+    _animationController.dispose(); // Animasyon controller dispose edildi
     _employeeIdController.dispose();
     _nameController.dispose();
     _surnameController.dispose();
@@ -41,19 +67,19 @@ class _EmployeeRegistrationScreenState
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _taxIdController.dispose();
+    _shopNameController.dispose();
     super.dispose();
   }
 
   void _register() {
     if (_formKey.currentState!.validate()) {
-      // Düzeltme: Hata mesajı İngilizce'ye çevrildi
       if (_passwordController.text != _confirmPasswordController.text) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Passwords do not match.')));
         return;
       }
 
-      // Düzeltme: Başarı mesajı İngilizce'ye çevrildi
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Employee Registration Successful!')));
       Navigator.push(
@@ -75,7 +101,6 @@ class _EmployeeRegistrationScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label Text Düzeltme: Her zaman İngilizce ve büyük harf
         Text(labelText.toUpperCase(),
             style: const TextStyle(
                 fontSize: 12,
@@ -119,7 +144,6 @@ class _EmployeeRegistrationScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label Text Düzeltme: Her zaman İngilizce ve büyük harf
         Text(labelText.toUpperCase(),
             style: const TextStyle(
                 fontSize: 12,
@@ -131,7 +155,7 @@ class _EmployeeRegistrationScreenState
           obscureText: !isVisible,
           validator: validator,
           decoration: InputDecoration(
-            hintText: '******', // Şifre alanına hint eklendi
+            hintText: '******',
             hintStyle: const TextStyle(color: Colors.black87),
             filled: true,
             fillColor: kInputFillColor,
@@ -160,34 +184,81 @@ class _EmployeeRegistrationScreenState
   @override
   Widget build(BuildContext context) {
     final double screenHeight = MediaQuery.of(context).size.height;
-    // Mavi kısım yüksekliği: %12 olarak Ziyaretçi ekranı ile eşitlendi
-    final double blueSectionHeight = screenHeight * 0.12;
+    final double screenWidth = MediaQuery.of(context).size.width;
 
-    // Top pozisyonu: Mavi alanın hemen altı
+    // ORANSAL AYARLAR (VisitorRegistrationScreen ve LoginScreen ile aynı)
+    final double blueSectionHeight = screenHeight * 0.12;
+    // HATA DÜZELTME: Formun başlangıç pozisyonunu topPosition olarak tanımlıyoruz
     final double topPosition = blueSectionHeight;
+
+    // Animasyon boyutu
+    const double lottieHeight = 80;
+    const double lottieWidth = 100;
+
+    // Animasyonun dikey konumu: Formun başladığı çizginin 80px üzerine
+    final double lottiePositionTop =
+        topPosition - lottieHeight; // DÜZELTME YAPILDI
+
+    // Yatay hareket miktarı
+    final double carMoveRange = screenWidth - lottieWidth;
 
     return Scaffold(
       backgroundColor: kLightBlue,
       body: Stack(
         children: [
-          // 1. Turuncu Alan (Düz çizgi başlangıcı)
+          // 1. Mavi alanın dolgusu
+          Container(
+              height: screenHeight, width: double.infinity, color: kLightBlue),
+
+          // 2. Lottie Animasyonu (Hareketli)
+          AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              final double carX = _animation.value * carMoveRange;
+
+              return Positioned(
+                // Animasyonun dikey konumu, formun başlangıç çizgisinin hemen üstü
+                top: lottiePositionTop,
+                left: carX,
+                child: child!,
+              );
+            },
+            child: Lottie.asset(
+              'assets/lottie/tourists.json.json',
+              width: lottieWidth,
+              height: lottieHeight,
+              repeat: true,
+              errorBuilder: (context, error, stackTrace) {
+                return const SizedBox(height: 1);
+              },
+            ),
+          ),
+
+          // 3. Turuncu Alan (Form Alanı) - Yuvarlak geçişi uyguluyoruz
           Positioned.fill(
-            top: topPosition,
+            top: topPosition, // Form, mavi alanın bittiği yerden başlar
             child: SingleChildScrollView(
               physics: const ClampingScrollPhysics(),
               child: Container(
-                color: kLightOrange,
+                // Yuvarlak bir geçiş için dekorasyon ekleniyor
+                decoration: BoxDecoration(
+                    color: kLightOrange,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(30.0), // Yuvarlak köşe
+                      topRight: Radius.circular(30.0), // Yuvarlak köşe
+                    )),
                 padding: const EdgeInsets.only(
                     top: 30, left: 30, right: 30, bottom: 30),
                 constraints: BoxConstraints(
-                  minHeight: screenHeight - topPosition + 30,
+                  // Ekranın alt kısmına kadar uzamayı garanti eder
+                  minHeight: screenHeight - topPosition,
                 ),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      // Başlıklar İngilizce'ye çevrildi
+                      // Başlıklar
                       const Text('Create new',
                           style: TextStyle(
                               fontSize: 32, fontWeight: FontWeight.bold)),
@@ -197,89 +268,111 @@ class _EmployeeRegistrationScreenState
 
                       const SizedBox(height: 30),
 
-                      // Personel ID alanı ve validasyon mesajı İngilizce'ye çevrildi
+                      // Personel ID
                       _buildThemedTextFormField(
                         controller: _employeeIdController,
-                        labelText: 'EMPLOYEE ID', // GÜNCELLENDİ
+                        labelText: 'EMPLOYEE ID',
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly
                         ],
-                        validator: (value) => value!.isEmpty
-                            ? 'Employee ID is required.' // GÜNCELLENDİ
-                            : null,
+                        validator: (value) =>
+                            value!.isEmpty ? 'Employee ID is required.' : null,
                       ),
                       const SizedBox(height: 15),
 
-                      // İsim ve Soyisim alanları ve validasyon mesajları İngilizce'ye çevrildi
+                      // İsim
                       _buildThemedTextFormField(
                           controller: _nameController,
-                          labelText: 'FIRST NAME', // GÜNCELLENDİ
+                          labelText: 'FIRST NAME',
                           validator: (value) => value!.isEmpty
                               ? 'First name is required.'
                               : null),
                       const SizedBox(height: 15),
+
+                      // Soyisim
                       _buildThemedTextFormField(
                           controller: _surnameController,
-                          labelText: 'LAST NAME', // GÜNCELLENDİ
+                          labelText: 'LAST NAME',
                           validator: (value) =>
                               value!.isEmpty ? 'Last name is required.' : null),
                       const SizedBox(height: 15),
 
-                      // Telefon Numarası alanı ve validasyon mesajı İngilizce'ye çevrildi
+                      // TELEFON
                       _buildThemedTextFormField(
                         controller: _phoneController,
-                        labelText: 'PHONE NUMBER', // GÜNCELLENDİ
+                        labelText: 'PHONE NUMBER',
                         keyboardType: TextInputType.phone,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly
                         ],
-                        validator: (value) => value!.isEmpty
-                            ? 'Phone number is required.' // GÜNCELLENDİ
-                            : null,
+                        validator: (value) =>
+                            value!.isEmpty ? 'Phone number is required.' : null,
                       ),
                       const SizedBox(height: 15),
 
-                      // E-posta alanı ve validasyon mesajı İngilizce'ye çevrildi
+                      // DÜKKAN ADI
+                      _buildThemedTextFormField(
+                        controller: _shopNameController,
+                        labelText: 'SHOP NAME',
+                        validator: (value) =>
+                            value!.isEmpty ? 'Shop Name is required.' : null,
+                      ),
+                      const SizedBox(height: 15),
+
+                      // VERGİ NUMARASI
+                      _buildThemedTextFormField(
+                        controller: _taxIdController,
+                        labelText: 'TAX ID',
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                        validator: (value) =>
+                            value!.isEmpty ? 'Tax ID is required.' : null,
+                      ),
+                      const SizedBox(height: 15),
+
+                      // E-posta
                       _buildThemedTextFormField(
                         controller: _emailController,
-                        labelText: 'EMAIL', // GÜNCELLENDİ
+                        labelText: 'EMAIL',
                         keyboardType: TextInputType.emailAddress,
-                        validator: (value) => value!.isEmpty ||
-                                !value.contains('@')
-                            ? 'Please enter a valid email address.' // GÜNCELLENDİ
-                            : null,
+                        validator: (value) =>
+                            value!.isEmpty || !value.contains('@')
+                                ? 'Please enter a valid email address.'
+                                : null,
                       ),
                       const SizedBox(height: 15),
 
-                      // Şifre Alanı ve validasyon mesajı İngilizce'ye çevrildi
+                      // Şifre
                       _buildPasswordTextFormField(
                         controller: _passwordController,
-                        labelText: 'PASSWORD', // GÜNCELLENDİ
+                        labelText: 'PASSWORD',
                         isVisible: _isPasswordVisible,
                         onToggle: () => setState(
                             () => _isPasswordVisible = !_isPasswordVisible),
                         validator: (v) => v!.length < 6
-                            ? 'Password must be at least 6 characters.' // GÜNCELLENDİ
+                            ? 'Password must be at least 6 characters.'
                             : null,
                       ),
                       const SizedBox(height: 15),
 
-                      // Şifre Tekrar Alanı ve validasyon mesajı İngilizce'ye çevrildi
+                      // Şifre Tekrar
                       _buildPasswordTextFormField(
                         controller: _confirmPasswordController,
-                        labelText: 'CONFIRM PASSWORD', // GÜNCELLENDİ
+                        labelText: 'CONFIRM PASSWORD',
                         isVisible: _isConfirmPasswordVisible,
                         onToggle: () => setState(() =>
                             _isConfirmPasswordVisible =
                                 !_isConfirmPasswordVisible),
                         validator: (value) => value!.isEmpty
-                            ? 'Please confirm your password.' // GÜNCELLENDİ
+                            ? 'Please confirm your password.'
                             : null,
                       ),
                       const SizedBox(height: 40),
 
-                      // SIGN UP Butonu (Renk ve metin doğru)
+                      // SIGN UP Butonu
                       SizedBox(
                         width: double.infinity,
                         height: 55,
@@ -307,7 +400,7 @@ class _EmployeeRegistrationScreenState
             ),
           ),
 
-          // 2. Geri Butonu (Sabit)
+          // 4. Geri Butonu (Sabit)
           Positioned(
             top: 40,
             left: 20,

@@ -1,116 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart'; // Import Lottie
-import '../utils/app_styles.dart'; // Assumed dependency for colors
-import 'selection_screen.dart'; // Assumed screen for navigation
+import 'package:lottie/lottie.dart';
+import '../utils/app_styles.dart';
+import 'selection_screen.dart'; // Geri dönüş için gerekli
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final double screenHeight = MediaQuery.of(context).size.height;
-    // Blue section height: 25% of screen height
-    final double blueSectionHeight = screenHeight * 0.25;
-
-    // Position where the colored sections meet (straight transition)
-    final double transitionPosition = blueSectionHeight;
-
-    return Scaffold(
-      backgroundColor: kLightBlue,
-      body: Stack(
-        children: [
-          // 1. Blue Background (Needed for background color)
-          Container(
-              height: screenHeight, width: double.infinity, color: kLightBlue),
-
-          // 2. Walking Man Lottie Animation
-          Positioned(
-            // Positioned just above the orange section start
-            top: transitionPosition - 70,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Lottie.asset(
-                // Corrected the likely double extension (.json.json -> .json)
-                'assets/lottie/tourists.json.json',
-                width: 100,
-                height: 80,
-                fit: BoxFit.fitWidth,
-                repeat: true, // Loop continuously
-                errorBuilder: (context, error, stackTrace) {
-                  return const SizedBox(height: 1); // Return empty box on error
-                },
-              ),
-            ),
-          ),
-
-          // 3. Orange Area (Scrollable content)
-          Positioned(
-            top: transitionPosition, // Straight transition start
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SingleChildScrollView(
-              physics: const ClampingScrollPhysics(),
-              child: Container(
-                color: kLightOrange,
-                padding: const EdgeInsets.only(
-                    top: 30, left: 30, right: 30, bottom: 30),
-                constraints: BoxConstraints(
-                  minHeight: screenHeight - transitionPosition,
-                ),
-                child: const LoginFormContent(),
-              ),
-            ),
-          ),
-
-          // 4. Back Button (Stays on top)
-          Positioned(
-            top: 40,
-            left: 20,
-            child: TextButton.icon(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back, color: kPrimaryBlue),
-              label: const Text('Back',
-                  style: TextStyle(color: kPrimaryBlue, fontSize: 18)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-// LoginFormContent Widget (Handles form state and logic)
-class LoginFormContent extends StatefulWidget {
-  const LoginFormContent({super.key});
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
+  // --- Animation Controllers ---
+  late AnimationController _animationController;
+  late Animation<double> _animation;
 
-  @override
-  State<LoginFormContent> createState() => _LoginFormContentState();
-}
-
-class _LoginFormContentState extends State<LoginFormContent> {
+  // Form Kontrolcüleri
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
-  // Password visibility state
   bool _isPasswordVisible = false;
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
+  // Login işlemi simülasyonu
   void _login() {
     if (_formKey.currentState!.validate()) {
-      // Translation: 'Giriş Başarılı (Simülasyon)' -> 'Login Successful (Simulation)'
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login Successful (Simulation)')),
       );
-      // Navigate to SelectionScreen and remove all previous routes
+      // Başarılı giriş sonrası SelectionScreen'a yönlendirme
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const SelectionScreen()),
@@ -119,12 +37,40 @@ class _LoginFormContentState extends State<LoginFormContent> {
     }
   }
 
-  // Themed TextFormField helper (General use)
+  @override
+  void initState() {
+    super.initState();
+    // VisitorRegistrationScreen'deki Animasyon Ayarları
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15), // Uzun süreli, sürekli ilerleme
+    );
+
+    _animation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.linear),
+    );
+
+    // VisitorRegistrationScreen'deki gibi tekrarla (tersine çevirme yok)
+    _animationController.repeat(reverse: false);
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  // Themed TextFormField helper
   Widget _buildThemedTextFormField({
     required TextEditingController controller,
     required String labelText,
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
+    bool isPassword = false,
+    bool isVisible = false,
+    VoidCallback? onToggle,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,13 +79,15 @@ class _LoginFormContentState extends State<LoginFormContent> {
             style: const TextStyle(
                 fontSize: 12,
                 color: Colors.black54,
-                fontWeight: FontWeight.bold)), // Added bold for consistency
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: 5),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           validator: validator,
+          obscureText: isPassword && !isVisible,
           decoration: InputDecoration(
+            hintText: isPassword ? '******' : null,
             hintStyle: const TextStyle(color: Colors.black87),
             filled: true,
             fillColor: kInputFillColor,
@@ -148,66 +96,15 @@ class _LoginFormContentState extends State<LoginFormContent> {
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide.none),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Password TextFormField helper (Includes visibility toggle)
-  Widget _buildPasswordTextFormField({
-    required TextEditingController controller,
-    required String labelText,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(labelText.toUpperCase(),
-            style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black54,
-                fontWeight: FontWeight.bold)), // Added bold for consistency
-        const SizedBox(height: 5),
-        TextFormField(
-          controller: controller,
-          obscureText: !_isPasswordVisible,
-          // Translation: 'Şifre en az 6 karakter olmalıdır.' -> 'Password must be at least 6 characters.'
-          validator: (v) =>
-              v!.length < 6 ? 'Password must be at least 6 characters.' : null,
-          decoration: InputDecoration(
-            hintText: '******', // Added hint text for password fields
-            hintStyle: const TextStyle(color: Colors.black87),
-            filled: true,
-            fillColor: kInputFillColor,
-            contentPadding:
-                const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                color: Colors.black54,
-              ),
-              onPressed: () {
-                // Toggles password visibility
-                setState(() {
-                  _isPasswordVisible = !_isPasswordVisible;
-                });
-              },
-            ),
+            suffixIcon: isPassword
+                ? IconButton(
+                    icon: Icon(
+                      isVisible ? Icons.visibility : Icons.visibility_off,
+                      color: Colors.black54,
+                    ),
+                    onPressed: onToggle,
+                  )
+                : null,
           ),
         ),
       ],
@@ -216,71 +113,189 @@ class _LoginFormContentState extends State<LoginFormContent> {
 
   @override
   Widget build(BuildContext context) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text('Welcome',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-          const Text('Back',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double screenWidth = MediaQuery.of(context).size.width;
 
-          const SizedBox(height: 40),
+    // BİREBİR AYNI ORAN: Mavi alan ekranın %12'si (VisitorScreen'den alındı)
+    final double blueSectionHeight = screenHeight * 0.12;
+    final double separatorPosition =
+        blueSectionHeight; // Formun başlayacağı çizgi
 
-          // Email field
-          _buildThemedTextFormField(
-            controller: _emailController,
-            // Translation: 'E-POSTA' -> 'EMAIL'
-            labelText: 'EMAIL',
-            keyboardType: TextInputType.emailAddress,
-            validator: (v) => v!.isEmpty || !v.contains('@')
-                // Translation: 'Geçerli e-posta gerekli.' -> 'Valid email is required.'
-                ? 'Valid email is required.'
-                : null,
-          ),
-          const SizedBox(height: 15),
+    // Animasyon boyutu (VisitorScreen'den alındı)
+    const double lottieHeight = 80;
+    const double lottieWidth = 100;
 
-          // Password field
-          _buildPasswordTextFormField(
-            controller: _passwordController,
-            // Translation: 'ŞİFRE' -> 'PASSWORD'
-            labelText: 'PASSWORD',
-          ),
-          const SizedBox(height: 20),
+    // Animasyonun dikey konumu: Formun başladığı çizginin 80px üzerine
+    final double lottiePositionTop = separatorPosition - lottieHeight;
 
-          // Forgot Password button
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {
-                // Placeholder for Forgot Password logic
+    // Yatay hareket miktarı (Ekran genişliğinden animasyon genişliğini çıkar)
+    final double carMoveRange = screenWidth - lottieWidth;
+
+    return Scaffold(
+      backgroundColor: kLightBlue, // Mavi alanın rengi
+      body: Stack(
+        children: [
+          // 1. Mavi Alan (Üst %12)
+          Container(
+              height: screenHeight, width: double.infinity, color: kLightBlue),
+
+          // 2. Lottie Animasyonu (Hareketli - Visitor'daki gibi tek yönlü)
+          AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              // VisitorRegistrationScreen'deki gibi hesaplama:
+              // 1.0 -> 0.0 değeri (carMoveRange) ile çarpılır.
+              final double carX = _animation.value * carMoveRange;
+
+              return Positioned(
+                // Animasyonun dikey konumu, formun başlangıç çizgisinin hemen üstü
+                top: lottiePositionTop,
+                left: carX,
+                child: child!,
+              );
+            },
+            child: Lottie.asset(
+              'assets/lottie/tourists.json.json', // Dosya adını düzelttim.
+              width: lottieWidth,
+              height: lottieHeight,
+              repeat: true,
+              errorBuilder: (context, error, stackTrace) {
+                return const SizedBox(height: 1);
               },
-              child: Text('Forgot Password?',
-                  style: TextStyle(
-                      color: kPrimaryBlue, fontWeight: FontWeight.bold)),
             ),
           ),
-          const SizedBox(height: 40),
 
-          // LOG IN Button
-          SizedBox(
-            width: double.infinity,
-            height: 55,
-            child: ElevatedButton(
-              onPressed: _login,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kOrangeButton,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                elevation: 8,
-                shadowColor: Colors.black.withOpacity(0.5),
+          // 3. Turuncu Alan (Form Alanı) - Yuvarlak geçişi koruduk
+          Positioned.fill(
+            top: separatorPosition, // Form, mavi alanın bittiği yerden başlar
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Container(
+                // Yuvarlak bir geçiş istendiği için Container'a dekorasyon ekliyoruz
+                decoration: BoxDecoration(
+                    color: kLightOrange, // Turuncu renk burada başlar.
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(
+                          30.0), // Yuvarlak köşe (Overlap simülasyonu)
+                      topRight: Radius.circular(30.0), // Yuvarlak köşe
+                    )),
+                padding: const EdgeInsets.all(30),
+                constraints:
+                    BoxConstraints(minHeight: screenHeight - separatorPosition),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      // Başlıklar
+                      const SizedBox(
+                          height: 30), // Lottie animasyonuna yer açmak için
+                      const Text('Welcome',
+                          style: TextStyle(
+                              fontSize: 32, fontWeight: FontWeight.bold)),
+                      const Text('Back',
+                          style: TextStyle(
+                              fontSize: 32, fontWeight: FontWeight.bold)),
+
+                      const SizedBox(height: 40),
+
+                      // Email field
+                      _buildThemedTextFormField(
+                        controller: _emailController,
+                        labelText: 'EMAIL',
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (v) => v!.isEmpty || !v.contains('@')
+                            ? 'Valid email is required.'
+                            : null,
+                      ),
+                      const SizedBox(height: 15),
+
+                      // Password field
+                      _buildThemedTextFormField(
+                        controller: _passwordController,
+                        labelText: 'PASSWORD',
+                        isPassword: true,
+                        isVisible: _isPasswordVisible,
+                        onToggle: () => setState(() {
+                          _isPasswordVisible = !_isPasswordVisible;
+                        }),
+                        validator: (v) => v!.length < 6
+                            ? 'Password must be at least 6 characters.'
+                            : null,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Forgot Password button
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            // Placeholder for Forgot Password logic
+                          },
+                          child: Text('Forgot Password?',
+                              style: TextStyle(
+                                  color: kPrimaryBlue,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+
+                      // LOG IN Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 55,
+                        child: ElevatedButton(
+                          onPressed: _login,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: kOrangeButton,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                            elevation: 8,
+                            shadowColor: Colors.black.withOpacity(0.5),
+                          ),
+                          child: const Text('LOG IN',
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+
+                      // Register Now Link
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text("Don't have an account? ",
+                              style: TextStyle(color: Colors.black54)),
+                          GestureDetector(
+                            onTap: () {
+                              // Selection screen'a geri dönüyoruz
+                              Navigator.pop(context);
+                            },
+                            child: Text('Register Now',
+                                style: TextStyle(
+                                    color: kPrimaryBlue,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: const Text('LOG IN',
-                  style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold)),
+            ),
+          ),
+
+          // 4. Geri Butonu
+          Positioned(
+            top: 40,
+            left: 20,
+            child: TextButton.icon(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back, color: kPrimaryBlue),
+              label: const Text('Back',
+                  style: TextStyle(color: kPrimaryBlue, fontSize: 18)),
             ),
           ),
         ],

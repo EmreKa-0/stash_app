@@ -71,7 +71,7 @@ class SelectionScreen extends StatelessWidget {
               opacity: 0.2,
               child: Icon(
                 Icons.luggage_outlined, // Valiz/bagaj ikonu
-                size: MediaQuery.of(context).size.width * 1.2,
+                size: MediaQuery.of(context).size.width * 1,
                 color: kPrimaryBlue.withOpacity(0.4),
               ),
             ),
