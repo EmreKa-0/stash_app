@@ -87,17 +87,6 @@ class SelectionScreen extends StatelessWidget {
                 children: [
                   const SizedBox(height: 40),
 
-                  // Geri Butonu (En üstte)
-                  Align(
-                    alignment: Alignment.topLeft,
-                    child: TextButton.icon(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back, color: kPrimaryBlue),
-                      label: const Text('Back',
-                          style: TextStyle(color: kPrimaryBlue, fontSize: 18)),
-                    ),
-                  ),
-
                   const SizedBox(height: 20),
 
                   // Ana Başlık
