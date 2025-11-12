@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:lottie/lottie.dart';
 
 import '../utils/app_styles.dart';
-import 'employee_dashboard_screen.dart'; // Kayıttan sonra yönlendirilecek ekran
+import 'employee_dashboard_screen.dart';
+import '../utils/database_helper.dart';
+import '../models/user_models.dart';
 
 class EmployeeRegistrationScreen extends StatefulWidget {
   const EmployeeRegistrationScreen({super.key});
@@ -15,13 +17,9 @@ class EmployeeRegistrationScreen extends StatefulWidget {
 
 class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
     with SingleTickerProviderStateMixin {
-  // Animasyon için Ticker mixin
-
-  // --- Animation Controllers ---
   late AnimationController _animationController;
   late Animation<double> _animation;
 
-  // Controller'lar
   final TextEditingController _employeeIdController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _surnameController = TextEditingController();
@@ -30,36 +28,31 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
-
-  // EK ALANLAR (Yeni eklenenler)
   final TextEditingController _taxIdController = TextEditingController();
   final TextEditingController _shopNameController = TextEditingController();
+  // YENİ: Adres Controller
+  final TextEditingController _addressController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
-
-  // Şifre görünürlük durumları
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
   @override
   void initState() {
     super.initState();
-    // Animasyon Ayarları
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 15),
     );
-
     _animation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.linear),
     );
-
     _animationController.repeat(reverse: false);
   }
 
   @override
   void dispose() {
-    _animationController.dispose(); // Animasyon controller dispose edildi
+    _animationController.dispose();
     _employeeIdController.dispose();
     _nameController.dispose();
     _surnameController.dispose();
@@ -69,10 +62,11 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
     _confirmPasswordController.dispose();
     _taxIdController.dispose();
     _shopNameController.dispose();
+    _addressController.dispose(); // YENİ
     super.dispose();
   }
 
-  void _register() {
+  void _register() async {
     if (_formKey.currentState!.validate()) {
       if (_passwordController.text != _confirmPasswordController.text) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -80,17 +74,41 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Employee Registration Successful!')));
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) => const EmployeeDashboardScreen()),
-      );
+      try {
+        // Çalışan nesnesini oluştur (Adres dahil)
+        Employee newEmployee = Employee(
+          employeeId: _employeeIdController.text,
+          firstName: _nameController.text,
+          lastName: _surnameController.text,
+          phone: _phoneController.text,
+          shopName: _shopNameController.text,
+          taxId: _taxIdController.text,
+          address: _addressController.text, // YENİ: Adres eklendi
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
+
+        // Veritabanına kaydet
+        await DatabaseHelper.instance.insertEmployee(newEmployee);
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Employee Registration Successful!')));
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+              builder: (context) => const EmployeeDashboardScreen()),
+          (route) => false,
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Registration Failed: $e')));
+      }
     }
   }
 
-  // Ortak kullanılan tema uyumlu TextFormField (Şifre hariç)
   Widget _buildThemedTextFormField({
     required TextEditingController controller,
     required String labelText,
@@ -121,19 +139,12 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide.none),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none),
           ),
         ),
       ],
     );
   }
 
-  // Şifre alanları için özel widget (Göz butonu)
   Widget _buildPasswordTextFormField({
     required TextEditingController controller,
     required String labelText,
@@ -156,7 +167,6 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
           validator: validator,
           decoration: InputDecoration(
             hintText: '******',
-            hintStyle: const TextStyle(color: Colors.black87),
             filled: true,
             fillColor: kInputFillColor,
             contentPadding:
@@ -164,16 +174,10 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide.none),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none),
             suffixIcon: IconButton(
               icon: Icon(isVisible ? Icons.visibility : Icons.visibility_off,
                   color: Colors.black54),
-              onPressed: onToggle, // Toggle işlemi
+              onPressed: onToggle,
             ),
           ),
         ),
@@ -185,39 +189,23 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
   Widget build(BuildContext context) {
     final double screenHeight = MediaQuery.of(context).size.height;
     final double screenWidth = MediaQuery.of(context).size.width;
-
-    // ORANSAL AYARLAR (VisitorRegistrationScreen ve LoginScreen ile aynı)
-    final double blueSectionHeight = screenHeight * 0.12;
-    // HATA DÜZELTME: Formun başlangıç pozisyonunu topPosition olarak tanımlıyoruz
-    final double topPosition = blueSectionHeight;
-
-    // Animasyon boyutu
+    final double topPosition = screenHeight * 0.12;
     const double lottieHeight = 80;
     const double lottieWidth = 100;
-
-    // Animasyonun dikey konumu: Formun başladığı çizginin 80px üzerine
-    final double lottiePositionTop =
-        topPosition - lottieHeight; // DÜZELTME YAPILDI
-
-    // Yatay hareket miktarı
+    final double lottiePositionTop = topPosition - lottieHeight;
     final double carMoveRange = screenWidth - lottieWidth;
 
     return Scaffold(
       backgroundColor: kLightBlue,
       body: Stack(
         children: [
-          // 1. Mavi alanın dolgusu
           Container(
               height: screenHeight, width: double.infinity, color: kLightBlue),
-
-          // 2. Lottie Animasyonu (Hareketli)
           AnimatedBuilder(
             animation: _animation,
             builder: (context, child) {
               final double carX = _animation.value * carMoveRange;
-
               return Positioned(
-                // Animasyonun dikey konumu, formun başlangıç çizgisinin hemen üstü
                 top: lottiePositionTop,
                 left: carX,
                 child: child!,
@@ -228,29 +216,23 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
               width: lottieWidth,
               height: lottieHeight,
               repeat: true,
-              errorBuilder: (context, error, stackTrace) {
-                return const SizedBox(height: 1);
-              },
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox(height: 1),
             ),
           ),
-
-          // 3. Turuncu Alan (Form Alanı) - Yuvarlak geçişi uyguluyoruz
           Positioned.fill(
-            top: topPosition, // Form, mavi alanın bittiği yerden başlar
+            top: topPosition,
             child: SingleChildScrollView(
               physics: const ClampingScrollPhysics(),
               child: Container(
-                // Yuvarlak bir geçiş için dekorasyon ekleniyor
                 decoration: BoxDecoration(
                     color: kLightOrange,
                     borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(30.0), // Yuvarlak köşe
-                      topRight: Radius.circular(30.0), // Yuvarlak köşe
+                      topLeft: Radius.circular(30.0),
+                      topRight: Radius.circular(30.0),
                     )),
-                padding: const EdgeInsets.only(
-                    top: 30, left: 30, right: 30, bottom: 30),
+                padding: const EdgeInsets.all(30),
                 constraints: BoxConstraints(
-                  // Ekranın alt kısmına kadar uzamayı garanti eder
                   minHeight: screenHeight - topPosition,
                 ),
                 child: Form(
@@ -258,17 +240,14 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      // Başlıklar
                       const Text('Create new',
                           style: TextStyle(
                               fontSize: 32, fontWeight: FontWeight.bold)),
                       const Text('Employee Account',
                           style: TextStyle(
                               fontSize: 32, fontWeight: FontWeight.bold)),
-
                       const SizedBox(height: 30),
 
-                      // Personel ID
                       _buildThemedTextFormField(
                         controller: _employeeIdController,
                         labelText: 'EMPLOYEE ID',
@@ -277,28 +256,21 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
                           FilteringTextInputFormatter.digitsOnly
                         ],
                         validator: (value) =>
-                            value!.isEmpty ? 'Employee ID is required.' : null,
+                            value!.isEmpty ? 'Required.' : null,
                       ),
                       const SizedBox(height: 15),
-
-                      // İsim
                       _buildThemedTextFormField(
                           controller: _nameController,
                           labelText: 'FIRST NAME',
-                          validator: (value) => value!.isEmpty
-                              ? 'First name is required.'
-                              : null),
+                          validator: (value) =>
+                              value!.isEmpty ? 'Required.' : null),
                       const SizedBox(height: 15),
-
-                      // Soyisim
                       _buildThemedTextFormField(
                           controller: _surnameController,
                           labelText: 'LAST NAME',
                           validator: (value) =>
-                              value!.isEmpty ? 'Last name is required.' : null),
+                              value!.isEmpty ? 'Required.' : null),
                       const SizedBox(height: 15),
-
-                      // TELEFON
                       _buildThemedTextFormField(
                         controller: _phoneController,
                         labelText: 'PHONE NUMBER',
@@ -307,20 +279,16 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
                           FilteringTextInputFormatter.digitsOnly
                         ],
                         validator: (value) =>
-                            value!.isEmpty ? 'Phone number is required.' : null,
+                            value!.isEmpty ? 'Required.' : null,
                       ),
                       const SizedBox(height: 15),
-
-                      // DÜKKAN ADI
                       _buildThemedTextFormField(
                         controller: _shopNameController,
                         labelText: 'SHOP NAME',
                         validator: (value) =>
-                            value!.isEmpty ? 'Shop Name is required.' : null,
+                            value!.isEmpty ? 'Required.' : null,
                       ),
                       const SizedBox(height: 15),
-
-                      // VERGİ NUMARASI
                       _buildThemedTextFormField(
                         controller: _taxIdController,
                         labelText: 'TAX ID',
@@ -329,36 +297,39 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
                           FilteringTextInputFormatter.digitsOnly
                         ],
                         validator: (value) =>
-                            value!.isEmpty ? 'Tax ID is required.' : null,
+                            value!.isEmpty ? 'Required.' : null,
                       ),
                       const SizedBox(height: 15),
 
-                      // E-posta
+                      // --- YENİ: ADRES ALANI ---
+                      _buildThemedTextFormField(
+                        controller: _addressController,
+                        labelText: 'SHOP ADDRESS',
+                        validator: (value) =>
+                            value!.isEmpty ? 'Address is required.' : null,
+                      ),
+                      const SizedBox(height: 15),
+                      // -------------------------
+
                       _buildThemedTextFormField(
                         controller: _emailController,
                         labelText: 'EMAIL',
                         keyboardType: TextInputType.emailAddress,
                         validator: (value) =>
                             value!.isEmpty || !value.contains('@')
-                                ? 'Please enter a valid email address.'
+                                ? 'Valid email required.'
                                 : null,
                       ),
                       const SizedBox(height: 15),
-
-                      // Şifre
                       _buildPasswordTextFormField(
                         controller: _passwordController,
                         labelText: 'PASSWORD',
                         isVisible: _isPasswordVisible,
                         onToggle: () => setState(
                             () => _isPasswordVisible = !_isPasswordVisible),
-                        validator: (v) => v!.length < 6
-                            ? 'Password must be at least 6 characters.'
-                            : null,
+                        validator: (v) => v!.length < 6 ? 'Min 6 chars.' : null,
                       ),
                       const SizedBox(height: 15),
-
-                      // Şifre Tekrar
                       _buildPasswordTextFormField(
                         controller: _confirmPasswordController,
                         labelText: 'CONFIRM PASSWORD',
@@ -366,13 +337,10 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
                         onToggle: () => setState(() =>
                             _isConfirmPasswordVisible =
                                 !_isConfirmPasswordVisible),
-                        validator: (value) => value!.isEmpty
-                            ? 'Please confirm your password.'
-                            : null,
+                        validator: (value) =>
+                            value!.isEmpty ? 'Required.' : null,
                       ),
                       const SizedBox(height: 40),
-
-                      // SIGN UP Butonu
                       SizedBox(
                         width: double.infinity,
                         height: 55,
@@ -383,7 +351,6 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10)),
                             elevation: 8,
-                            shadowColor: Colors.black.withOpacity(0.5),
                           ),
                           child: const Text('SIGN UP',
                               style: TextStyle(
@@ -399,8 +366,6 @@ class _EmployeeRegistrationScreenState extends State<EmployeeRegistrationScreen>
               ),
             ),
           ),
-
-          // 4. Geri Butonu (Sabit)
           Positioned(
             top: 40,
             left: 20,

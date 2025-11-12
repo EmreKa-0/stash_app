@@ -35,6 +35,8 @@ dependencies:
   cupertino_icons: ^1.0.2
   sqflite: ^2.3.3+1 # Güncel sürümü kontrol edebilirsiniz
   path: ^1.9.0
+  flutter_map: ^6.1.0 # (veya güncel bir sürüm)
+  latlong2: ^0.9.1 
 
 dev_dependencies:
   flutter_test:

@@ -67,6 +67,7 @@ class Employee {
   String phone;
   String shopName;
   String taxId;
+  String address;
   String email;
   String password;
 
@@ -78,6 +79,7 @@ class Employee {
     required this.phone,
     required this.shopName,
     required this.taxId,
+    required this.address,
     required this.email,
     required this.password,
   });
@@ -92,6 +94,7 @@ class Employee {
       'phone': phone,
       'shopName': shopName,
       'taxId': taxId,
+      'address': address,
       'email': email,
       'password': password,
     };
@@ -107,6 +110,7 @@ class Employee {
       phone: map['phone'] as String,
       shopName: map['shopName'] as String,
       taxId: map['taxId'] as String,
+      address: map['address'] as String,
       email: map['email'] as String,
       password: map['password'] as String,
     );

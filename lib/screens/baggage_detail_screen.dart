@@ -1,5 +1,6 @@
 import 'package:emanet/screens/confirmation_screen.dart';
 import 'package:flutter/material.dart';
+import 'map_screen.dart'; //Harita import edildi
 
 // --- YENİ EKLENDİ (Çıkış için) ---
 import 'selection_screen.dart';
@@ -18,22 +19,20 @@ class _BaggageDetailScreenState extends State<BaggageDetailScreen> {
   // Örnek: Emanet türünü seçmek için
   String? _selectedBaggageType;
   final List<String> _baggageTypes = [
-    'Valiz (Büyük)',
-    'Valiz (Orta)',
-    'Sırt Çantası',
-    'Kutu',
-    'Diğer',
+    'Baggage (Big)',
+    'Baggage (Medium)',
+    'Backpack',
+    'Case',
+    'Other',
   ];
 
   void _navigateToConfirmation() {
     if (_selectedBaggageType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen bir emanet türü seçiniz.')),
+        const SnackBar(content: Text('Please pick a stash type.')),
       );
       return;
     }
-
-    print('Emanet Kaydedildi: $_baggageCount adet $_selectedBaggageType');
 
     Navigator.push(
       context,
@@ -44,19 +43,18 @@ class _BaggageDetailScreenState extends State<BaggageDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset:
+          false, // Klavye açılınca haritanın bozulmasını engeller
       appBar: AppBar(
-        title: const Text('Emanet Detayları'),
+        title: const Text('Stash detailsx'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
-
-        // --- YENİ EKLENEN ÇIKIŞ BUTONU ---
-        automaticallyImplyLeading: false, // Geri okunu gizler
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: 'Çıkış Yap',
+            tooltip: 'Exit',
             onPressed: () {
-              // Çıkış yap ve Selection Screen'e yönlendir (tüm eski ekranları temizle)
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
                     builder: (context) => const SelectionScreen()),
@@ -65,92 +63,83 @@ class _BaggageDetailScreenState extends State<BaggageDetailScreen> {
             },
           ),
         ],
-        // --- BİTİŞ ---
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            const Text(
-              'Emanet Türü ve Sayısını Belirtin:',
-              style: TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 20),
-
-            // Emanet Türü Seçimi
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Emanet Türü',
-                prefixIcon: Icon(Icons.category),
-              ),
-              value: _selectedBaggageType,
-              hint: const Text('Seçiniz'),
-              items: _baggageTypes
-                  .map(
-                    (String value) => DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (String? newValue) {
-                setState(() => _selectedBaggageType = newValue);
-              },
-              validator: (value) =>
-                  value == null ? 'Tür seçimi zorunludur.' : null,
-            ),
-            const SizedBox(height: 40),
-
-            // Emanet Sayısı Ayarlayıcı
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildCountButton(Icons.remove, () {
-                  if (_baggageCount > 1) {
-                    setState(() => _baggageCount--);
-                  }
-                }),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                  child: Text(
-                    '$_baggageCount',
-                    style: const TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blueGrey,
-                    ),
+      body: Column(
+        children: [
+          // ÜST KISIM: Emanet Seçimi (Scroll edilebilir değil, sabit alan)
+          Container(
+            padding: const EdgeInsets.all(20.0),
+            color: Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Emanet Türü',
+                    prefixIcon: Icon(Icons.category),
+                    border: OutlineInputBorder(),
                   ),
+                  value: _selectedBaggageType,
+                  items: _baggageTypes
+                      .map((val) =>
+                          DropdownMenuItem(value: val, child: Text(val)))
+                      .toList(),
+                  onChanged: (val) =>
+                      setState(() => _selectedBaggageType = val),
                 ),
-                _buildCountButton(Icons.add, () {
-                  setState(() => _baggageCount++);
-                }),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildCountButton(Icons.remove, () {
+                      if (_baggageCount > 1) setState(() => _baggageCount--);
+                    }),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                      child: Text('$_baggageCount',
+                          style: const TextStyle(
+                              fontSize: 32, fontWeight: FontWeight.bold)),
+                    ),
+                    _buildCountButton(Icons.add, () {
+                      setState(() => _baggageCount++);
+                    }),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _navigateToConfirmation,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    backgroundColor: Colors.orange,
+                  ),
+                  child: const Text('EMANETİ ONAYLA',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
               ],
             ),
-            const SizedBox(height: 10),
-            const Center(child: Text('Eşya Sayısı')),
-            const SizedBox(height: 50),
+          ),
 
-            // Onay Butonu
-            ElevatedButton(
-              onPressed: _navigateToConfirmation,
-              child: const Text('EMANETİ ONAYLA'),
-            ),
-          ],
-        ),
+          // ALT KISIM: Harita (Geriye kalan tüm alanı kaplar)
+          const Expanded(
+            child: MapScreen(),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildCountButton(IconData icon, VoidCallback onPressed) {
     return SizedBox(
-      width: 60,
-      height: 60,
+      width: 50,
+      height: 50,
       child: FloatingActionButton(
-        heroTag: icon.codePoint
-            .toString(), // Aynı ekranda birden fazla FAB varsa hata vermemesi için
+        heroTag: icon.codePoint.toString(),
         onPressed: onPressed,
-        child: Icon(icon, size: 30),
+        mini: true,
+        backgroundColor: Colors.grey[200],
+        elevation: 1,
+        child: Icon(icon, color: Colors.black),
       ),
     );
   }

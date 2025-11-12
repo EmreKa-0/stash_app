@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/user_models.dart';
 
 class DatabaseHelper {
-  static const _databaseName = "StashApp.db";
+  static const _databaseName = "StashAppV2.db";
   static const _databaseVersion = 1;
 
   // Tablo adları
@@ -31,6 +31,7 @@ class DatabaseHelper {
   static const columnEmployeeId = 'employeeId';
   static const columnShopName = 'shopName';
   static const columnTaxId = 'taxId';
+  static const columnAddress = 'address';
 
   // Sınıfı 'singleton' yapıyoruz
   DatabaseHelper._privateConstructor();
@@ -78,6 +79,7 @@ class DatabaseHelper {
             $columnPhone TEXT NOT NULL,
             $columnShopName TEXT NOT NULL,
             $columnTaxId TEXT NOT NULL,
+            $columnAddress TEXT NOT NULL,
             $columnEmail TEXT NOT NULL UNIQUE,
             $columnPassword TEXT NOT NULL
           )
