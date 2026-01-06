@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "772973568522",
+    "project_id": "stashapp-8ab49",
+    "storage_bucket": "stashapp-8ab49.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:772973568522:android:0f47b7308a2e271d70f5f3",
+        "android_client_info": {
+          "package_name": "com.example.emanet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzizC7JnHt5DVa7JD8W5D7qIOACdK3jU4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
